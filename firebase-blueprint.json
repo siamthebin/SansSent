@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the Sans Sent app.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User ID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "photoURL": { "type": "string", "description": "User profile photo URL" },
+        "balance": { "type": "number", "description": "User's current balance in dollars" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
+      },
+      "required": ["uid", "email", "balance", "createdAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A money transfer between two users.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string", "description": "UID of the sender" },
+        "senderEmail": { "type": "string", "description": "Email of the sender" },
+        "receiverId": { "type": "string", "description": "UID of the receiver" },
+        "receiverEmail": { "type": "string", "description": "Email of the receiver" },
+        "amount": { "type": "number", "description": "Amount transferred" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Time of transaction" }
+      },
+      "required": ["senderId", "senderEmail", "receiverId", "receiverEmail", "amount", "timestamp"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user profiles and balances."
+    },
+    "transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Stores all money transfers."
+    }
+  }
+}

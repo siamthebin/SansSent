@@ -1,0 +1,69 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'balance', 'createdAt']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.balance is number &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['senderId', 'senderEmail', 'receiverId', 'receiverEmail', 'amount', 'timestamp']) &&
+             data.senderId is string &&
+             data.senderEmail is string &&
+             data.receiverId is string &&
+             data.receiverEmail is string &&
+             data.amount is number && data.amount > 0 &&
+             data.timestamp is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles to send money
+      allow read: if isAuthenticated();
+      
+      // Users can create their own profile
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.uid == userId;
+      
+      // Users can update balances.
+      // A user can decrease their own balance, or increase someone else's balance.
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (
+        // Owner updating their own profile (can only decrease balance or keep it same)
+        (isOwner(userId) && request.resource.data.balance <= resource.data.balance) ||
+        // Someone else updating this profile (can only increase balance)
+        (!isOwner(userId) && request.resource.data.balance > resource.data.balance)
+      );
+    }
+
+    match /transactions/{transactionId} {
+      // Users can read transactions where they are sender or receiver
+      allow read: if isAuthenticated() && (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+      
+      // Users can create a transaction if they are the sender
+      allow create: if isAuthenticated() && 
+                    isValidTransaction(request.resource.data) && 
+                    request.resource.data.senderId == request.auth.uid;
+                    
+      // Transactions are immutable
+      allow update, delete: if false;
+    }
+  }
+}
